@@ -1,0 +1,6 @@
+parameters:
+    level: 8
+    paths:
+        - src
+    scanFiles:
+        - tools/stubs/FFI/CData.php
