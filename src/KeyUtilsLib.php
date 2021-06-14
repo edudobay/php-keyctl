@@ -59,7 +59,10 @@ class KeyUtilsLib
     {
         $errno ??= posix_get_last_error();
         if ($errno === KeyUtilsException::ENOKEY) {
-            throw KeyNotFoundException::forKey($context['type'], $context['description']);
+            throw KeyNotFoundException::forKey(
+                (string) $context['type'],
+                (string) $context['description']
+            );
         }
         throw KeyUtilsException::fromError($errno);
     }
