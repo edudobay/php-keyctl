@@ -8,6 +8,8 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use Symfony\Component\Console\Application;
 
 $application = new Application();
+$application->add(new KeyAddCommand());
+$application->add(new KeyReadCommand());
 $application->add(new KeyringAddCommand());
 $application->add(new KeyringDescribeCommand());
 $application->run();

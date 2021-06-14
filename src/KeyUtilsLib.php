@@ -7,7 +7,9 @@ namespace Linux\KeyUtils;
 use FFI;
 use InvalidArgumentException;
 
+use function ctype_digit;
 use function posix_get_last_error;
+use function strlen;
 
 class KeyUtilsLib
 {
@@ -64,6 +66,10 @@ class KeyUtilsLib
 
     public function resolve_key_spec(string $spec): int
     {
+        if (ctype_digit($spec)) {
+            return (int) $spec;
+        }
+
         return match ($spec) {
             "@t" => self::KEY_SPEC_THREAD_KEYRING,
             "@p" => self::KEY_SPEC_PROCESS_KEYRING,
@@ -88,6 +94,20 @@ class KeyUtilsLib
         return $keySerial;
     }
 
+    public function add_key(string $name, string $data, string $parent): int
+    {
+        $parentKeyId = self::resolve_key_spec($parent);
+
+        $type = "user";
+
+        $keySerial = $this->ffi->add_key($type, $name, $data, strlen($data), $parentKeyId);
+        if ($keySerial < 0) {
+            throw self::exception();
+        }
+
+        return $keySerial;
+    }
+
     public function request_key(string $type, string $description): int
     {
         $keySerial = $this->ffi->request_key($type, $description, null, 0);
@@ -104,6 +124,26 @@ class KeyUtilsLib
         $buffer = FFI::new('char*[1]');
 
         $size = $this->ffi->keyctl_describe_alloc($id, FFI::addr($buffer[0]));
+        if ($size < 0) {
+            throw self::exception();
+        }
+
+        $description = FFI::string($buffer[0], $size);
+
+        // Buffer returned by `keyctl_describe_alloc` must be freed (FFI::free won't work)
+        $this->libc->free($buffer[0]);
+
+        return $description;
+    }
+
+    public function read_key(string $keySpec): string
+    {
+        /** @var FFI\CDataArray $buffer */
+        $buffer = FFI::new('char*[1]');
+
+        $id = $this->resolve_key_spec($keySpec);
+
+        $size = $this->ffi->keyctl_read_alloc($id, FFI::addr($buffer[0]));
         if ($size < 0) {
             throw self::exception();
         }
